@@ -1,12 +1,22 @@
 use std::{collections::BTreeMap, ffi::OsString};
 
 use anyhow::Result;
-use config::{keymap::{Exec, KeymapLayer}, open::Opener};
+use config::{
+	keymap::{Exec, KeymapLayer},
+	open::Opener,
+};
 use crossterm::event::KeyEvent;
 use shared::{InputError, RoCell, Url};
-use tokio::sync::{mpsc::{self, UnboundedSender}, oneshot};
+use tokio::sync::{
+	mpsc::{self, UnboundedSender},
+	oneshot,
+};
 
-use super::{files::{File, FilesOp}, input::InputOpt, select::SelectOpt};
+use super::{
+	files::{File, FilesOp},
+	input::InputOpt,
+	select::SelectOpt,
+};
 use crate::manager::PreviewLock;
 
 static TX: RoCell<UnboundedSender<Event>> = RoCell::new();
@@ -14,6 +24,7 @@ static TX: RoCell<UnboundedSender<Event>> = RoCell::new();
 pub enum Event {
 	Quit,
 	Key(KeyEvent),
+	CWDOnQuit,
 	Paste(String),
 	Render(String),
 	Resize(u16, u16),
@@ -41,10 +52,14 @@ pub enum Event {
 
 impl Event {
 	#[inline]
-	pub fn init(tx: UnboundedSender<Event>) { TX.init(tx); }
+	pub fn init(tx: UnboundedSender<Event>) {
+		TX.init(tx);
+	}
 
 	#[inline]
-	pub fn emit(self) { TX.send(self).ok(); }
+	pub fn emit(self) {
+		TX.send(self).ok();
+	}
 
 	pub async fn wait<T>(self, rx: oneshot::Receiver<T>) -> T {
 		TX.send(self).ok();

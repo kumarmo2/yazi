@@ -1,6 +1,10 @@
 use core::{emit, files::FilesSorter, input::InputMode};
 
-use config::{keymap::{Control, Exec, Key, KeymapLayer}, manager::SortBy, KEYMAP};
+use config::{
+	keymap::{Control, Exec, Key, KeymapLayer},
+	manager::SortBy,
+	KEYMAP,
+};
 use shared::{optional_bool, Url};
 
 use super::Ctx;
@@ -56,6 +60,7 @@ impl Executor {
 		match exec.cmd.as_str() {
 			"escape" => cx.manager.active_mut().escape(),
 			"quit" => cx.manager.quit(&cx.tasks),
+			"cwd_on_quit" => cx.manager.cwd_on_quit(&cx.tasks),
 			"close" => cx.manager.close(&cx.tasks),
 			"suspend" => cx.manager.suspend(),
 
@@ -151,10 +156,9 @@ impl Executor {
 			// Sorting
 			"sort" => {
 				let b = cx.manager.active_mut().set_sorter(FilesSorter {
-					by:        SortBy::try_from(exec.args.get(0).cloned().unwrap_or_default())
-						.unwrap_or_default(),
+					by: SortBy::try_from(exec.args.get(0).cloned().unwrap_or_default()).unwrap_or_default(),
 					sensitive: exec.named.contains_key("sensitive"),
-					reverse:   exec.named.contains_key("reverse"),
+					reverse: exec.named.contains_key("reverse"),
 					dir_first: exec.named.contains_key("dir_first"),
 				});
 				cx.tasks.precache_size(&cx.manager.current().files);
@@ -200,7 +204,11 @@ impl Executor {
 
 			"arrow" => {
 				let step = exec.args.get(0).and_then(|s| s.parse().ok()).unwrap_or(0);
-				if step > 0 { cx.tasks.next() } else { cx.tasks.prev() }
+				if step > 0 {
+					cx.tasks.next()
+				} else {
+					cx.tasks.prev()
+				}
 			}
 
 			"inspect" => cx.tasks.inspect(),
@@ -217,7 +225,11 @@ impl Executor {
 
 			"arrow" => {
 				let step: isize = exec.args.get(0).and_then(|s| s.parse().ok()).unwrap_or(0);
-				if step > 0 { cx.select.next(step as usize) } else { cx.select.prev(step.unsigned_abs()) }
+				if step > 0 {
+					cx.select.next(step as usize)
+				} else {
+					cx.select.prev(step.unsigned_abs())
+				}
 			}
 
 			"help" => cx.help.toggle(cx.layer()),

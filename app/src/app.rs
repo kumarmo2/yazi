@@ -2,7 +2,10 @@ use core::{emit, files::FilesOp, input::InputMode, Event};
 use std::ffi::OsString;
 
 use anyhow::{Ok, Result};
-use config::{keymap::{Exec, Key, KeymapLayer}, BOOT};
+use config::{
+	keymap::{Exec, Key, KeymapLayer},
+	BOOT,
+};
 use crossterm::event::KeyEvent;
 use shared::{expand_url, Term};
 use tokio::sync::oneshot;
@@ -10,8 +13,8 @@ use tokio::sync::oneshot;
 use crate::{Ctx, Executor, Logs, Root, Signals};
 
 pub(super) struct App {
-	cx:      Ctx,
-	term:    Option<Term>,
+	cx: Ctx,
+	term: Option<Term>,
 	signals: Signals,
 }
 
@@ -26,7 +29,11 @@ impl App {
 		while let Some(event) = app.signals.recv().await {
 			match event {
 				Event::Quit => {
-					app.dispatch_quit();
+					app.dispatch_quit(false);
+					break;
+				}
+				Event::CWDOnQuit => {
+					app.dispatch_quit(true);
 					break;
 				}
 				Event::Key(key) => app.dispatch_key(key),
@@ -41,7 +48,10 @@ impl App {
 		Ok(())
 	}
 
-	fn dispatch_quit(&mut self) {
+	fn dispatch_quit(&mut self, should_cwd: bool) {
+		if !should_cwd {
+			return;
+		}
 		if let Some(p) = &BOOT.cwd_file {
 			let cwd = self.cx.manager.cwd().as_os_str();
 
