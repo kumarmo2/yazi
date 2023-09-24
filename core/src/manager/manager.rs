@@ -1,28 +1,46 @@
-use std::{collections::{BTreeMap, BTreeSet, HashMap, HashSet}, env, ffi::OsStr, io::{stdout, BufWriter, Write}, path::PathBuf};
+use std::{
+	collections::{BTreeMap, BTreeSet, HashMap, HashSet},
+	env,
+	ffi::OsStr,
+	io::{stdout, BufWriter, Write},
+	path::PathBuf,
+};
 
 use anyhow::{anyhow, bail, Error, Result};
 use config::{OPEN, PREVIEW};
 use shared::{max_common_root, Defer, Term, Url, MIME_DIR};
-use tokio::{fs::{self, OpenOptions}, io::{stdin, AsyncReadExt, AsyncWriteExt}};
+use tokio::{
+	fs::{self, OpenOptions},
+	io::{stdin, AsyncReadExt, AsyncWriteExt},
+};
 
 use super::{Tab, Tabs, Watcher};
-use crate::{emit, external::{self, ShellOpt}, files::{File, FilesOp}, input::InputOpt, manager::Folder, select::SelectOpt, tasks::Tasks, Event, BLOCKER};
+use crate::{
+	emit,
+	external::{self, ShellOpt},
+	files::{File, FilesOp},
+	input::InputOpt,
+	manager::Folder,
+	select::SelectOpt,
+	tasks::Tasks,
+	Event, BLOCKER,
+};
 
 pub struct Manager {
-	tabs:   Tabs,
+	tabs: Tabs,
 	yanked: (bool, HashSet<Url>),
 
-	watcher:      Watcher,
+	watcher: Watcher,
 	pub mimetype: HashMap<Url, String>,
 }
 
 impl Manager {
 	pub fn make() -> Self {
 		Self {
-			tabs:   Tabs::make(),
+			tabs: Tabs::make(),
 			yanked: Default::default(),
 
-			watcher:  Watcher::start(),
+			watcher: Watcher::start(),
 			mimetype: Default::default(),
 		}
 	}
@@ -88,6 +106,26 @@ impl Manager {
 		false
 	}
 
+	pub fn cwd_on_quit(&self, tasks: &Tasks) -> bool {
+		let tasks = tasks.len();
+		if tasks == 0 {
+			emit!(CWDOnQuit);
+			return false;
+		}
+
+		tokio::spawn(async move {
+			let mut result = emit!(Input(InputOpt::top(format!(
+				"There are {tasks} tasks running, sure to quit? (y/N)"
+			))));
+
+			if let Some(Ok(choice)) = result.recv().await {
+				if choice == "y" || choice == "Y" {
+					emit!(CWDOnQuit);
+				}
+			}
+		});
+		false
+	}
 	pub fn quit(&self, tasks: &Tasks) -> bool {
 		let tasks = tasks.len();
 		if tasks == 0 {
@@ -259,9 +297,9 @@ impl Manager {
 			emit!(Stop(true)).await;
 
 			let mut child = external::shell(ShellOpt {
-				cmd:    (*opener.exec).into(),
-				args:   vec![tmp.to_owned().into()],
-				piped:  false,
+				cmd: (*opener.exec).into(),
+				args: vec![tmp.to_owned().into()],
+				piped: false,
 				orphan: false,
 			})?;
 			child.wait().await?;
@@ -394,35 +432,57 @@ impl Manager {
 
 impl Manager {
 	#[inline]
-	pub fn cwd(&self) -> &Url { &self.current().cwd }
+	pub fn cwd(&self) -> &Url {
+		&self.current().cwd
+	}
 
 	#[inline]
-	pub fn tabs(&self) -> &Tabs { &self.tabs }
+	pub fn tabs(&self) -> &Tabs {
+		&self.tabs
+	}
 
 	#[inline]
-	pub fn tabs_mut(&mut self) -> &mut Tabs { &mut self.tabs }
+	pub fn tabs_mut(&mut self) -> &mut Tabs {
+		&mut self.tabs
+	}
 
 	#[inline]
-	pub fn active(&self) -> &Tab { self.tabs.active() }
+	pub fn active(&self) -> &Tab {
+		self.tabs.active()
+	}
 
 	#[inline]
-	pub fn active_mut(&mut self) -> &mut Tab { self.tabs.active_mut() }
+	pub fn active_mut(&mut self) -> &mut Tab {
+		self.tabs.active_mut()
+	}
 
 	#[inline]
-	pub fn current(&self) -> &Folder { &self.tabs.active().current }
+	pub fn current(&self) -> &Folder {
+		&self.tabs.active().current
+	}
 
 	#[inline]
-	pub fn current_mut(&mut self) -> &mut Folder { &mut self.tabs.active_mut().current }
+	pub fn current_mut(&mut self) -> &mut Folder {
+		&mut self.tabs.active_mut().current
+	}
 
 	#[inline]
-	pub fn parent(&self) -> Option<&Folder> { self.tabs.active().parent.as_ref() }
+	pub fn parent(&self) -> Option<&Folder> {
+		self.tabs.active().parent.as_ref()
+	}
 
 	#[inline]
-	pub fn hovered(&self) -> Option<&File> { self.tabs.active().current.hovered.as_ref() }
+	pub fn hovered(&self) -> Option<&File> {
+		self.tabs.active().current.hovered.as_ref()
+	}
 
 	#[inline]
-	pub fn selected(&self) -> Vec<&File> { self.tabs.active().selected() }
+	pub fn selected(&self) -> Vec<&File> {
+		self.tabs.active().selected()
+	}
 
 	#[inline]
-	pub fn yanked(&self) -> &(bool, HashSet<Url>) { &self.yanked }
+	pub fn yanked(&self) -> &(bool, HashSet<Url>) {
+		&self.yanked
+	}
 }
