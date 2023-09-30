@@ -108,6 +108,17 @@ impl Finder {
 			self.query.is_match(name.as_bytes())
 		}
 	}
+
+	/// Explode the name into three parts: head, body, tail.
+	#[inline]
+	pub fn explode(&self, name: &[u8]) -> Option<(String, String, String)> {
+		let range = self.query.find(name).map(|m| m.range())?;
+		Some((
+			String::from_utf8_lossy(&name[..range.start]).to_string(),
+			String::from_utf8_lossy(&name[range.start..range.end]).to_string(),
+			String::from_utf8_lossy(&name[range.end..]).to_string(),
+		))
+	}
 }
 
 impl Finder {
